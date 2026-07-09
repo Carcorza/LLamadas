@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Llamadas</title>
+    <title>Sistema de Llamadas - Global Life</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; }
@@ -16,6 +16,7 @@
         .form-group { margin-bottom: 20px; }
         label { display: block; color: #555; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
         
+        /* 📱 Evita el zoom automático molesto en pantallas iOS usando fuentes a 16px */
         select, textarea, input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; font-family: inherit; transition: border-color 0.3s; background-color: #fff; color: #000; -webkit-appearance: none; }
         select { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M0 3l5 5 5-5z' fill='%23666'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
         select:focus, textarea:focus, input:focus { outline: none; border-color: #667eea; }
@@ -24,7 +25,7 @@
         .info-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 14px; margin-bottom: 20px; border-radius: 0 8px 8px 0; display: none; font-size: 15px; }
         .info-box p { margin-bottom: 6px; color: #444; }
         
-        /* Modificado a enlace para compatibilidad estricta con iOS */
+        /* Enlace estilizado como botón para compatibilidad estricta con llamadas en iOS */
         .btn-call { display: none; width: 100%; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 600; text-align: center; text-decoration: none; cursor: pointer; transition: all 0.3s; margin-bottom: 12px; -webkit-appearance: none; background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; }
         
         button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-bottom: 12px; -webkit-appearance: none; }
@@ -84,7 +85,7 @@
                     <p><strong>Teléfono:</strong> <span id="lblTel"></span></p>
                 </div>
 
-                <!-- 📱 CORRECCIÓN PARA iOS: El botón ahora es un enlace directo sincronizado con el click -->
+                <!-- Enlace nativo directo sincronizado -->
                 <a href="#" class="btn-call" id="btnCall" onclick="ejecutarFlujoLlamada(event)">☎️ Iniciar Llamada</a>
                 
                 <div id="paso2">
@@ -127,7 +128,7 @@
             }
         });
 
-        function mezclarAleatorio(arreglo) {
+        function mezclaraAleatorio(arreglo) {
             for (let i = arreglo.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]];
@@ -143,9 +144,13 @@
 
             document.getElementById('loginMessage').style.display = 'none';
             document.getElementById('loginLoading').style.display = 'block';
-            document.activeElement.blur();
+            document.activeElement.blur(); // Oculta el teclado táctil
 
-            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "login", usuario: user, password: pass }) })
+            fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'cors',
+                body: JSON.stringify({ accion: "login", usuario: user, password: pass }) 
+            })
             .then(res => res.json())
             .then(data => {
                 document.getElementById('loginLoading').style.display = 'none';
@@ -163,29 +168,38 @@
                 }
             }).catch(e => {
                 document.getElementById('loginLoading').style.display = 'none';
-                mostrarMensaje('loginMessage', 'Error de conexión', 'error');
+                mostrarMensaje('loginMessage', 'Error de conexión: ' + e.message, 'error');
             });
         }
 
         function cargarContactos() {
             document.getElementById('estadoCarga').textContent = "Conectando con la base...";
-            fetch(SCRIPT_URL)
-                .then(res => res.json())
-                .then(data => {
-                    contactosData = mezclarAleatorio(data);
-                    const contactoSelect = document.getElementById('contactoSelect');
-                    
-                    if (contactosData.length === 0) {
-                        contactoSelect.innerHTML = '<option value="">Sin pendientes en la base</option>';
-                        document.getElementById('estadoCarga').textContent = "¡Base terminada!";
-                        return;
-                    }
+            
+            fetch(SCRIPT_URL, {
+                method: 'GET',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Status: ' + res.status);
+                return res.json();
+            })
+            .then(data => {
+                contactosData = mezclaraAleatorio(data);
+                const contactoSelect = document.getElementById('contactoSelect');
+                
+                if (contactosData.length === 0) {
+                    contactoSelect.innerHTML = '<option value="">Sin pendientes en la base</option>';
+                    document.getElementById('estadoCarga').textContent = "¡Base terminada!";
+                    return;
+                }
 
-                    refrescarListaLocal(); 
-                    contactoSelect.disabled = false;
-                }).catch(e => {
-                    document.getElementById('estadoCarga').textContent = "❌ Error cargando datos.";
-                });
+                refrescarListaLocal(); 
+                contactoSelect.disabled = false;
+            }).catch(e => {
+                document.getElementById('estadoCarga').textContent = "❌ Error: " + e.message;
+                alert("Error de red en el móvil: " + e.message + "\n\nSugerencia: Si usas Wi-Fi corporativo, desactívalo y prueba con datos móviles.");
+            });
         }
 
         function seleccionarContacto() {
@@ -198,7 +212,7 @@
             document.getElementById('lblDoc').textContent = contactoActual.documento;
             document.getElementById('lblTel').textContent = contactoActual.telefono;
             
-            // Sincronizar el enlace href nativo inmediatamente para que iOS no lo bloquee
+            // Sincronizar el enlace directo inmediatamente (Vital para Safari iOS)
             const btnCall = document.getElementById('btnCall');
             btnCall.href = `tel:${contactoActual.telefono}`;
             
@@ -206,28 +220,23 @@
             btnCall.style.display = 'block';
         }
 
-        // 📱 FUNCIÓN CLAVE PARA iOS: Primero se abre el teléfono nativamente y luego corre el Fetch
         function ejecutarFlujoLlamada(event) {
             if (!contactoActual) { event.preventDefault(); return; }
             
-            // Capturamos la hora de forma instantánea
             const fecha = new Date();
             horaLlamadaExacta = fecha.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit', hour12: true });
             document.getElementById('horaDisplay').textContent = horaLlamadaExacta;
 
-            // Cambiamos la interfaz visual
             document.getElementById('btnCall').style.display = 'none';
             document.getElementById('contactoSelect').disabled = true;
             document.getElementById('paso2').style.display = 'block';
 
-            // Registramos el bloqueo en Sheets en segundo plano sin congelar la llamada
+            // Bloquear en Sheets en segundo plano sin interrumpir la llamada
             fetch(SCRIPT_URL, { 
                 method: 'POST', 
                 mode: 'cors',
                 body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) 
-            }).catch(err => console.log("Registro de bloqueo enviado pasivamente"));
-            
-            // Dejamos que el comportamiento nativo del enlace 'tel:' continúe sin interrupción
+            }).catch(err => console.log("Bloqueo enviado pasivamente"));
         }
         
         function guardarYSiguiente() {
@@ -242,7 +251,11 @@
                 novedad: document.getElementById('novedad').value, usuario_call: currentUser 
             };
             
-            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+            fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'cors',
+                body: JSON.stringify(payload) 
+            })
             .then(res => res.json())
             .then(data => {
                 document.getElementById('appLoading').style.display = 'none';
@@ -254,6 +267,9 @@
                     refrescarListaLocal();
                     reiniciarInterfaz();
                 }, 1500);
+            }).catch(e => {
+                document.getElementById('appLoading').style.display = 'none';
+                mostrarMensaje('appMessage', 'Error guardando datos', 'error');
             });
         }
 
@@ -263,8 +279,15 @@
             document.getElementById('appLoading').style.display = 'block';
             document.getElementById('loadingText').textContent = "Liberando contacto...";
 
-            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) })
+            fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'cors',
+                body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) 
+            })
             .then(() => {
+                document.getElementById('appLoading').style.display = 'none';
+                reiniciarInterfaz();
+            }).catch(() => {
                 document.getElementById('appLoading').style.display = 'none';
                 reiniciarInterfaz();
             });
