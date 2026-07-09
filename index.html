@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sistema de Llamadas</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; }
+        .container { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 450px; width: 100%; }
+        h1 { color: #333; margin-bottom: 10px; text-align: center; font-size: 22px; }
+        .subtitle { text-align: center; color: #999; margin-bottom: 25px; font-size: 13px; }
+        #loginScreen { display: block; }
+        #appScreen { display: none; }
+        .user-badge { background: #e9ecef; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-weight: bold; color: #495057; font-size: 14px;}
+        .form-group { margin-bottom: 20px; }
+        label { display: block; color: #555; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+        
+        select, textarea, input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; font-family: inherit; transition: border-color 0.3s; background-color: #fff; color: #000; -webkit-appearance: none; }
+        select { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M0 3l5 5 5-5z' fill='%23666'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
+        select:focus, textarea:focus, input:focus { outline: none; border-color: #667eea; }
+        textarea { resize: vertical; min-height: 90px; }
+        
+        .info-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 14px; margin-bottom: 20px; border-radius: 0 8px 8px 0; display: none; font-size: 15px; }
+        .info-box p { margin-bottom: 6px; color: #444; }
+        
+        /* Modificado a enlace para compatibilidad estricta con iOS */
+        .btn-call { display: none; width: 100%; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 600; text-align: center; text-decoration: none; cursor: pointer; transition: all 0.3s; margin-bottom: 12px; -webkit-appearance: none; background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; }
+        
+        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-bottom: 12px; -webkit-appearance: none; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-next { background: #28a745; color: white; }
+        .btn-cancel { background: #f0f0f0; color: #666; }
+        .message { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; font-size: 14px; display: none; }
+        .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+        .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+        .loading { display: none; text-align: center; margin-top: 15px; }
+        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
+        #paso2 { display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- PANTALLA DE LOGIN -->
+        <div id="loginScreen">
+            <h1>🔒 Acceso al Sistema</h1>
+            <p class="subtitle">Ingresa tus credenciales para continuar</p>
+            
+            <form id="loginForm" onsubmit="iniciarSesion(event)">
+                <div class="form-group">
+                    <label for="loginUser">Usuario</label>
+                    <input type="text" id="loginUser" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPass">Contraseña</label>
+                    <input type="password" id="loginPass" name="password" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn-primary">Ingresar</button>
+            </form>
+            
+            <div id="loginMessage" class="message"></div>
+            <div class="loading" id="loginLoading"><div class="spinner"></div><p style="margin-top: 10px;">Validando...</p></div>
+        </div>
+
+        <!-- PANTALLA PRINCIPAL -->
+        <div id="appScreen">
+            <h1>📞 Contact center <br>GLOBAL LIFE AMBULANCIAS SAS<br>Talento Humano</h1>
+            <div class="user-badge" id="displayUsuario">Usuario: -</div>
+            <p class="subtitle" id="estadoCarga">Cargando Candidatos...</p>
+            
+            <form id="callForm">
+                <div class="form-group">
+                    <label for="contactoSelect">Seleccionar Candidato</label>
+                    <select id="contactoSelect" onchange="seleccionarContacto()" disabled>
+                        <option value="">Cargando datos...</option>
+                    </select>
+                </div>
+                
+                <div class="info-box" id="infoBox">
+                    <p><strong>Cargo:</strong> <span id="lblCargo" style="color: #764ba2; font-weight: bold;"></span></p>
+                    <p><strong>Documento:</strong> <span id="lblDoc"></span></p>
+                    <p><strong>Teléfono:</strong> <span id="lblTel"></span></p>
+                </div>
+
+                <!-- 📱 CORRECCIÓN PARA iOS: El botón ahora es un enlace directo sincronizado con el click -->
+                <a href="#" class="btn-call" id="btnCall" onclick="ejecutarFlujoLlamada(event)">☎️ Iniciar Llamada</a>
+                
+                <div id="paso2">
+                    <div class="form-group">
+                        <label style="color: #28a745; margin-bottom:10px;">
+                            Llamada iniciada a las: <br><strong><span id="horaDisplay"></span></strong>
+                        </label>
+                        <label for="observacion">Observación</label>
+                        <textarea id="observacion" placeholder="Ej: No contesta..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="novedad">Novedad</label>
+                        <input type="text" id="novedad" value="Ok">
+                    </div>
+                    
+                    <button type="button" class="btn-next" onclick="guardarYSiguiente()">Guardar y Finalizar ⏭️</button>
+                    <button type="button" class="btn-cancel" onclick="cancelarLlamada()">Cancelar Llamada</button>
+                </div>
+            </form>
+            
+            <div id="appMessage" class="message"></div>
+            <div class="loading" id="appLoading"><div class="spinner"></div><p id="loadingText" style="margin-top: 10px;">Procesando...</p></div>
+        </div>
+    </div>
+    
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzowZmf55VS9g19AFnzKWK3DMAwFV_e6ysEn8sV9_RDLvccb7R7cBpYh6utjUSW5Q47/exec';
+        
+        let currentUser = ""; 
+        let contactosData = [];
+        let contactoActual = null;
+        let horaLlamadaExacta = "";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedUser = localStorage.getItem("saved_user");
+            const savedPass = localStorage.getItem("saved_pass");
+            if (savedUser && savedPass) {
+                document.getElementById('loginUser').value = savedUser;
+                document.getElementById('loginPass').value = savedPass;
+            }
+        });
+
+        function mezclarAleatorio(arreglo) {
+            for (let i = arreglo.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]];
+            }
+            return arreglo;
+        }
+
+        function iniciarSesion(event) {
+            if(event) event.preventDefault();
+            const user = document.getElementById('loginUser').value;
+            const pass = document.getElementById('loginPass').value;
+            if(!user || !pass) return;
+
+            document.getElementById('loginMessage').style.display = 'none';
+            document.getElementById('loginLoading').style.display = 'block';
+            document.activeElement.blur();
+
+            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "login", usuario: user, password: pass }) })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loginLoading').style.display = 'none';
+                if(data.resultado === 'exito') {
+                    localStorage.setItem("saved_user", user);
+                    localStorage.setItem("saved_pass", pass);
+
+                    currentUser = data.usuario;
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('appScreen').style.display = 'block';
+                    document.getElementById('displayUsuario').textContent = `Usuario activo: ${currentUser}`;
+                    cargarContactos(); 
+                } else { 
+                    mostrarMensaje('loginMessage', data.mensaje, 'error'); 
+                }
+            }).catch(e => {
+                document.getElementById('loginLoading').style.display = 'none';
+                mostrarMensaje('loginMessage', 'Error de conexión', 'error');
+            });
+        }
+
+        function cargarContactos() {
+            document.getElementById('estadoCarga').textContent = "Conectando con la base...";
+            fetch(SCRIPT_URL)
+                .then(res => res.json())
+                .then(data => {
+                    contactosData = mezclarAleatorio(data);
+                    const contactoSelect = document.getElementById('contactoSelect');
+                    
+                    if (contactosData.length === 0) {
+                        contactoSelect.innerHTML = '<option value="">Sin pendientes en la base</option>';
+                        document.getElementById('estadoCarga').textContent = "¡Base terminada!";
+                        return;
+                    }
+
+                    refrescarListaLocal(); 
+                    contactoSelect.disabled = false;
+                }).catch(e => {
+                    document.getElementById('estadoCarga').textContent = "❌ Error cargando datos.";
+                });
+        }
+
+        function seleccionarContacto() {
+            const fila = parseInt(document.getElementById('contactoSelect').value);
+            if (!fila) { reiniciarInterfaz(); return; }
+
+            contactoActual = contactosData.find(c => c.fila === fila);
+            
+            document.getElementById('lblCargo').textContent = contactoActual.cargo || "No especificado";
+            document.getElementById('lblDoc').textContent = contactoActual.documento;
+            document.getElementById('lblTel').textContent = contactoActual.telefono;
+            
+            // Sincronizar el enlace href nativo inmediatamente para que iOS no lo bloquee
+            const btnCall = document.getElementById('btnCall');
+            btnCall.href = `tel:${contactoActual.telefono}`;
+            
+            document.getElementById('infoBox').style.display = 'block';
+            btnCall.style.display = 'block';
+        }
+
+        // 📱 FUNCIÓN CLAVE PARA iOS: Primero se abre el teléfono nativamente y luego corre el Fetch
+        function ejecutarFlujoLlamada(event) {
+            if (!contactoActual) { event.preventDefault(); return; }
+            
+            // Capturamos la hora de forma instantánea
+            const fecha = new Date();
+            horaLlamadaExacta = fecha.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit', hour12: true });
+            document.getElementById('horaDisplay').textContent = horaLlamadaExacta;
+
+            // Cambiamos la interfaz visual
+            document.getElementById('btnCall').style.display = 'none';
+            document.getElementById('contactoSelect').disabled = true;
+            document.getElementById('paso2').style.display = 'block';
+
+            // Registramos el bloqueo en Sheets en segundo plano sin congelar la llamada
+            fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'cors',
+                body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) 
+            }).catch(err => console.log("Registro de bloqueo enviado pasivamente"));
+            
+            // Dejamos que el comportamiento nativo del enlace 'tel:' continúe sin interrupción
+        }
+        
+        function guardarYSiguiente() {
+            document.getElementById('loadingText').textContent = "Guardando...";
+            document.getElementById('appLoading').style.display = 'block';
+            document.getElementById('paso2').style.display = 'none'; 
+            document.activeElement.blur();
+
+            const payload = { 
+                accion: "guardar", fila: contactoActual.fila, hora: horaLlamadaExacta, 
+                observacion: document.getElementById('observacion').value, 
+                novedad: document.getElementById('novedad').value, usuario_call: currentUser 
+            };
+            
+            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('appLoading').style.display = 'none';
+                mostrarMensaje('appMessage', '✅ Guardado exitoso.', 'success');
+                
+                contactosData = contactosData.filter(c => c.fila !== contactoActual.fila);
+                setTimeout(() => {
+                    document.getElementById('appMessage').style.display = 'none';
+                    refrescarListaLocal();
+                    reiniciarInterfaz();
+                }, 1500);
+            });
+        }
+
+        function cancelarLlamada() {
+            if(!contactoActual) return;
+            document.getElementById('paso2').style.display = 'none';
+            document.getElementById('appLoading').style.display = 'block';
+            document.getElementById('loadingText').textContent = "Liberando contacto...";
+
+            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) })
+            .then(() => {
+                document.getElementById('appLoading').style.display = 'none';
+                reiniciarInterfaz();
+            });
+        }
+
+        function refrescarListaLocal() {
+            const contactoSelect = document.getElementById('contactoSelect');
+            let opciones = '<option value="">-- Selecciona un Candidato --</option>';
+            contactosData.forEach(c => { 
+                opciones += `<option value="${c.fila}">${c.nombre} - ${c.cargo || 'Sin cargo'}</option>`; 
+            });
+            contactoSelect.innerHTML = opciones;
+            document.getElementById('estadoCarga').textContent = `Total pendientes: ${contactosData.length}`;
+        }
+
+        function reiniciarInterfaz() {
+            document.getElementById('contactoSelect').disabled = false;
+            document.getElementById('contactoSelect').value = "";
+            document.getElementById('infoBox').style.display = 'none';
+            document.getElementById('btnCall').style.display = 'none';
+            document.getElementById('btnCall').href = "#";
+            document.getElementById('paso2').style.display = 'none';
+            document.getElementById('observacion').value = "";
+            document.getElementById('novedad').value = "Ok";
+            document.getElementById('lblCargo').textContent = "";
+            contactoActual = null;
+            horaLlamadaExacta = "";
+        }
+        
+        function mostrarMensaje(elementId, texto, tipo) {
+            const m = document.getElementById(elementId);
+            m.textContent = texto; m.className = `message ${tipo}`;
+        }
+    </script>
+</body>
+</html>
