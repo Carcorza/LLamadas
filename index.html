@@ -20,10 +20,10 @@
         textarea { resize: vertical; min-height: 80px; }
         .info-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 12px; margin-bottom: 20px; border-radius: 0 8px 8px 0; display: none; font-size: 14px; }
         .info-box p { margin-bottom: 5px; color: #444; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-bottom: 10px; }
+        button, .btn-call { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-bottom: 10px; text-align: center; text-decoration: none; display: block; }
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3); }
-        .btn-call { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: none; }
+        .btn-call { background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; display: none; }
         .btn-next { background: #28a745; color: white; }
         .btn-cancel { background: #f0f0f0; color: #666; }
         .message { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; font-size: 13px; display: none; }
@@ -59,26 +59,38 @@
             <div class="loading" id="loginLoading"><div class="spinner"></div><p style="margin-top: 10px;">Validando...</p></div>
         </div>
 
-        <!-- PANTALLA PRINCIPAL (SIN FILTRO DE CARGO) -->
+        <!-- PANTALLA PRINCIPAL -->
         <div id="appScreen">
-            <h1>📞 Contact center</h1>
+            <h1>📞 Contact center <br>GLOBAL LIFE AMBULANCIAS SAS<br>Talento Humano</h1>
             <div class="user-badge" id="displayUsuario">Usuario: -</div>
-            <p class="subtitle" id="estadoCarga">Cargando pacientes...</p>
+            
+            <!-- Contenedor dinámico para el enlace general -->
+            <div id="contenedorLink" style="display: none; text-align: center; margin-bottom: 20px;">
+                <a href="https://docs.google.com/spreadsheets/d/1VUkxrVjr2P2_XZYGGnSk08SHGw4gvxQlRURVsEYryZI/edit?gid=0#gid=0" 
+                   target="_blank" 
+                   style="color: #667eea; font-weight: bold; text-decoration: underline; font-size: 14px;">
+                   🔗 Acceder a Base de Datos General
+                </a>
+            </div>
+
+            <p class="subtitle" id="estadoCarga">Cargando Candidatos...</p>
             
             <form id="callForm">
                 <div class="form-group">
-                    <label for="contactoSelect">Seleccionar Paciente</label>
+                    <label for="contactoSelect">Seleccionar Candidato</label>
                     <select id="contactoSelect" onchange="seleccionarContacto()" disabled>
                         <option value="">Cargando datos...</option>
                     </select>
                 </div>
                 
                 <div class="info-box" id="infoBox">
+                    <p><strong>Cargo:</strong> <span id="lblCargo" style="color: #764ba2; font-weight: bold;"></span></p>
                     <p><strong>Documento:</strong> <span id="lblDoc"></span></p>
                     <p><strong>Teléfono:</strong> <span id="lblTel"></span></p>
                 </div>
 
-                <button type="button" class="btn-call" id="btnCall" onclick="iniciarLlamada()">☎️ Iniciar Llamada</button>
+                <!-- Modificado a etiqueta <a> para garantizar estabilidad en llamadas desde iOS -->
+                <a href="#" class="btn-call" id="btnCall" onclick="iniciarLlamada(event)">☎️ Iniciar Llamada</a>
                 
                 <div id="paso2">
                     <div class="form-group">
@@ -104,13 +116,29 @@
     </div>
     
     <script>
-        // ⚠️ PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_NCzbTDgppL4X5kpRZyHpQXUBIqJVpyeu4mRB1Pc5yGmdMOCuZ7JzpesT9X2_uv5p/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzexM63BmQTP0w0YtQ2Ge4GVvnccfyv5p-d2-1UqyXHJD0WbuHbNhF5Q1SFPA0aQsQN/exec';
         
         let currentUser = ""; 
         let contactosData = [];
         let contactoActual = null;
         let horaLlamadaExacta = "";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedUser = localStorage.getItem("saved_user");
+            const savedPass = localStorage.getItem("saved_pass");
+            if (savedUser && savedPass) {
+                document.getElementById('loginUser').value = savedUser;
+                document.getElementById('loginPass').value = savedPass;
+            }
+        });
+
+        function mezclarAleatorio(arreglo) {
+            for (let i = arreglo.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]];
+            }
+            return arreglo;
+        }
 
         function iniciarSesion(event) {
             if(event) event.preventDefault();
@@ -126,10 +154,21 @@
             .then(data => {
                 document.getElementById('loginLoading').style.display = 'none';
                 if(data.resultado === 'exito') {
+                    localStorage.setItem("saved_user", user);
+                    localStorage.setItem("saved_pass", pass);
+
                     currentUser = data.usuario;
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('appScreen').style.display = 'block';
                     document.getElementById('displayUsuario').textContent = `Usuario activo: ${currentUser}`;
+                    
+                    // Valida si el servidor autorizó ver el hipervínculo general
+                    if (data.mostrarLink === true) {
+                        document.getElementById('contenedorLink').style.display = 'block';
+                    } else {
+                        document.getElementById('contenedorLink').style.display = 'none';
+                    }
+
                     cargarContactos(); 
                 } else { 
                     mostrarMensaje('loginMessage', data.mensaje, 'error'); 
@@ -145,24 +184,17 @@
             fetch(SCRIPT_URL)
                 .then(res => res.json())
                 .then(data => {
-                    contactosData = data;
+                    contactosData = mezclarAleatorio(data);
                     const contactoSelect = document.getElementById('contactoSelect');
                     
-                    if (data.length === 0) {
+                    if (contactosData.length === 0) {
                         contactoSelect.innerHTML = '<option value="">Sin pendientes en la base</option>';
                         document.getElementById('estadoCarga').textContent = "¡Base terminada!";
                         return;
                     }
 
-                    // Forma optimizada de cargar la lista para evitar que el celular colapse
-                    let opciones = '<option value="">-- Selecciona un Paciente --</option>';
-                    data.forEach(c => {
-                        opciones += `<option value="${c.fila}">${c.nombre} - ${c.documento}</option>`;
-                    });
-                    
-                    contactoSelect.innerHTML = opciones;
+                    refrescarListaLocal(); 
                     contactoSelect.disabled = false;
-                    document.getElementById('estadoCarga').textContent = `Total pendientes: ${data.length}`;
                 }).catch(e => {
                     document.getElementById('estadoCarga').textContent = "❌ Error cargando datos.";
                 });
@@ -173,32 +205,38 @@
             if (!fila) { reiniciarInterfaz(); return; }
 
             contactoActual = contactosData.find(c => c.fila === fila);
+            
+            document.getElementById('lblCargo').textContent = contactoActual.cargo || "No especificado";
             document.getElementById('lblDoc').textContent = contactoActual.documento;
             document.getElementById('lblTel').textContent = contactoActual.telefono;
+            
+            // Inyecta dinámicamente la URL telefónica nativa en la etiqueta <a>
+            const btnCall = document.getElementById('btnCall');
+            btnCall.href = `tel:${contactoActual.telefono}`;
+
             document.getElementById('infoBox').style.display = 'block';
-            document.getElementById('btnCall').style.display = 'block';
+            btnCall.style.display = 'block';
         }
 
-        function iniciarLlamada() {
-            if (!contactoActual) return;
+        function iniciarLlamada(event) {
+            if (!contactoActual) {
+                event.preventDefault();
+                return;
+            }
+            
+            const fecha = new Date();
+            horaLlamadaExacta = fecha.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit', hour12: true });
+            document.getElementById('horaDisplay').textContent = horaLlamadaExacta;
             
             document.getElementById('btnCall').style.display = 'none';
-            document.getElementById('appLoading').style.display = 'block';
-            document.getElementById('loadingText').textContent = "Bloqueando contacto...";
+            document.getElementById('contactoSelect').disabled = true;
+            document.getElementById('paso2').style.display = 'block';
 
-            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) })
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('appLoading').style.display = 'none';
-                const fecha = new Date();
-                horaLlamadaExacta = fecha.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit', hour12: true });
-                document.getElementById('horaDisplay').textContent = horaLlamadaExacta;
-                
-                window.location.href = `tel:${contactoActual.telefono}`;
-                
-                document.getElementById('contactoSelect').disabled = true;
-                document.getElementById('paso2').style.display = 'block';
-            });
+            // Ejecuta el bloqueo de la fila en segundo plano
+            fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) 
+            }).catch(e => console.log("Error registrando bloqueo: ", e));
         }
         
         function guardarYSiguiente() {
@@ -218,7 +256,6 @@
                 document.getElementById('appLoading').style.display = 'none';
                 mostrarMensaje('appMessage', '✅ Guardado exitoso.', 'success');
                 
-                // Actualiza la lista sin recargar toda la página
                 contactosData = contactosData.filter(c => c.fila !== contactoActual.fila);
                 setTimeout(() => {
                     document.getElementById('appMessage').style.display = 'none';
@@ -243,8 +280,10 @@
 
         function refrescarListaLocal() {
             const contactoSelect = document.getElementById('contactoSelect');
-            let opciones = '<option value="">-- Selecciona un Paciente --</option>';
-            contactosData.forEach(c => { opciones += `<option value="${c.fila}">${c.nombre} - ${c.documento}</option>`; });
+            let opciones = '<option value="">-- Selecciona un Candidato --</option>';
+            contactosData.forEach(c => { 
+                opciones += `<option value="${c.fila}">${c.nombre} - ${c.cargo || 'Sin cargo'}</option>`; 
+            });
             contactoSelect.innerHTML = opciones;
             document.getElementById('estadoCarga').textContent = `Total pendientes: ${contactosData.length}`;
         }
@@ -253,10 +292,15 @@
             document.getElementById('contactoSelect').disabled = false;
             document.getElementById('contactoSelect').value = "";
             document.getElementById('infoBox').style.display = 'none';
-            document.getElementById('btnCall').style.display = 'none';
+            
+            const btnCall = document.getElementById('btnCall');
+            btnCall.style.display = 'none';
+            btnCall.href = "#";
+
             document.getElementById('paso2').style.display = 'none';
             document.getElementById('observacion').value = "";
             document.getElementById('novedad').value = "Ok";
+            document.getElementById('lblCargo').textContent = "";
             contactoActual = null;
             horaLlamadaExacta = "";
         }
