@@ -60,7 +60,7 @@
             </form>
             
             <div id="loginMessage" class="message"></div>
-            <div class="loading" id="loginLoading"><div class="spinner"></div><p style="margin-top: 10px;">Validando...</p></div>
+            <div class="loading" id="loginLoading"><div class="spinner"></div><p style="margin-top: 10px;">Validando credenciales...</p></div>
         </div>
 
         <!-- PANTALLA PRINCIPAL -->
@@ -116,7 +116,6 @@
         let contactoActual = null;
         let horaLlamadaExacta = "";
 
-        // Lectura segura de almacenamiento local
         document.addEventListener("DOMContentLoaded", () => {
             try {
                 const savedUser = localStorage.getItem("saved_user");
@@ -125,7 +124,7 @@
                     document.getElementById('loginUser').value = savedUser;
                     document.getElementById('loginPass').value = savedPass;
                 }
-            } catch(e) { console.log("Cookies o localStorage deshabilitados."); }
+            } catch(e) { console.log("localStorage no disponible"); }
         });
 
         function mezclaraAleatorio(arreglo) {
@@ -136,27 +135,38 @@
             return arreglo;
         }
 
-        // 📱 MEJORA CRÍTICA: Cambiado de POST a GET parametrizado para evadir los bloqueos de red en móviles
         function iniciarSesion(event) {
             if(event) event.preventDefault();
+            
             const user = document.getElementById('loginUser').value.trim();
             const pass = document.getElementById('loginPass').value.trim();
             if(!user || !pass) return;
 
+            // Limpieza visual previa antes de disparar la consulta
             document.getElementById('loginMessage').style.display = 'none';
+            document.getElementById('loginMessage').textContent = '';
             document.getElementById('loginLoading').style.display = 'block';
-            document.activeElement.blur(); // Esconder teclado táctil
+            
+            // Forzar cierre de teclado móvil
+            document.activeElement.blur(); 
 
-            const urlConParametros = `${SCRIPT_URL}?accion=login&usuario=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
+            // Generar parámetro anti-caché dinámico para obligar al teléfono a consultar al servidor en tiempo real
+            const cacheBuster = new Date().getTime();
+            const urlFinal = `${SCRIPT_URL}?accion=login&usuario=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&_cb=${cacheBuster}`;
 
-            fetch(urlConParametros, { method: 'GET', mode: 'cors' })
+            fetch(urlFinal, { 
+                method: 'GET', 
+                mode: 'cors',
+                headers: { 'Accept': 'application/json' }
+            })
             .then(res => {
-                if(!res.ok) throw new Error("Servidor inaccesible (Status: " + res.status + ")");
+                if(!res.ok) throw new Error("Código HTTP: " + res.status);
                 return res.json();
             })
             .then(data => {
                 document.getElementById('loginLoading').style.display = 'none';
-                if(data.resultado === 'exito') {
+                
+                if(data && data.resultado === 'exito') {
                     try {
                         localStorage.setItem("saved_user", user);
                         localStorage.setItem("saved_pass", pass);
@@ -168,19 +178,23 @@
                     document.getElementById('displayUsuario').textContent = `Usuario activo: ${currentUser}`;
                     cargarContactos(); 
                 } else { 
-                    mostrarMensaje('loginMessage', data.mensaje || "Credenciales incorrectas", 'error'); 
+                    const msgErr = (data && data.mensaje) ? data.mensaje : "Usuario o contraseña inválidos.";
+                    mostrarMensaje('loginMessage', msgErr, 'error'); 
                 }
-            }).catch(e => {
+            })
+            .catch(e => {
                 document.getElementById('loginLoading').style.display = 'none';
-                mostrarMensaje('loginMessage', 'Error desde celular: ' + e.message, 'error');
-                alert("Fallo de autenticación en celular:\n" + e.message + "\n\nIntenta apagando el Wi-Fi e ingresa con datos móviles.");
+                // Captura el error exacto y lo plasma en pantalla para diagnóstico rápido
+                mostrarMensaje('loginMessage', 'Alerta de Red: Falla al procesar respuesta (' + e.message + ')', 'error');
+                console.error(e);
             });
         }
 
         function cargarContactos() {
             document.getElementById('estadoCarga').textContent = "Conectando con la base...";
+            const cacheBuster = new Date().getTime();
             
-            fetch(`${SCRIPT_URL}?timestamp=${new Date().getTime()}`, {
+            fetch(`${SCRIPT_URL}?accion=obtenerContactos&_cb=${cacheBuster}`, {
                 method: 'GET',
                 mode: 'cors'
             })
@@ -201,7 +215,7 @@
                 refrescarListaLocal(); 
                 contactoSelect.disabled = false;
             }).catch(e => {
-                document.getElementById('estadoCarga').textContent = "❌ Error: " + e.message;
+                document.getElementById('estadoCarga').textContent = "❌ Error cargando base: " + e.message;
             });
         }
 
@@ -233,12 +247,11 @@
             document.getElementById('contactoSelect').disabled = true;
             document.getElementById('paso2').style.display = 'block';
 
-            // Reportar bloqueo asíncronamente
             fetch(SCRIPT_URL, { 
                 method: 'POST', 
-                mode: 'no-cors', // Evita que iOS detenga la ejecución si el servidor tarda en responder
+                mode: 'no-cors', 
                 body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) 
-            }).catch(err => console.log("Bloqueo enviado pasivamente"));
+            }).catch(err => console.log("Bloqueo enviado"));
         }
         
         function guardarYSiguiente() {
@@ -256,10 +269,9 @@
             fetch(SCRIPT_URL, { 
                 method: 'POST', 
                 mode: 'no-cors',
-                body: JSON.stringify(payload) 
+                body: JSON.stringify(payload)
             })
             .then(() => {
-                // Al usar no-cors, asumimos éxito rápido para agilizar la operación en móvil
                 document.getElementById('appLoading').style.display = 'none';
                 mostrarMensaje('appMessage', '✅ Guardado exitoso.', 'success');
                 
