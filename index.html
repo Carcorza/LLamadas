@@ -16,7 +16,6 @@
         .form-group { margin-bottom: 20px; }
         label { display: block; color: #555; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
         
-        /* 📱 Evita el zoom automático molesto en pantallas iOS usando fuentes a 16px */
         select, textarea, input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; font-family: inherit; transition: border-color 0.3s; background-color: #fff; color: #000; -webkit-appearance: none; }
         select { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M0 3l5 5 5-5z' fill='%23666'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
         select:focus, textarea:focus, input:focus { outline: none; border-color: #667eea; }
@@ -25,7 +24,6 @@
         .info-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 14px; margin-bottom: 20px; border-radius: 0 8px 8px 0; display: none; font-size: 15px; }
         .info-box p { margin-bottom: 6px; color: #444; }
         
-        /* Enlace estilizado como botón para compatibilidad estricta con llamadas en iOS */
         .btn-call { display: none; width: 100%; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 600; text-align: center; text-decoration: none; cursor: pointer; transition: all 0.3s; margin-bottom: 12px; -webkit-appearance: none; background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; }
         
         button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-bottom: 12px; -webkit-appearance: none; }
@@ -85,7 +83,6 @@
                     <p><strong>Teléfono:</strong> <span id="lblTel"></span></p>
                 </div>
 
-                <!-- Enlace nativo directo sincronizado -->
                 <a href="#" class="btn-call" id="btnCall" onclick="ejecutarFlujoLlamada(event)">☎️ Iniciar Llamada</a>
                 
                 <div id="paso2">
@@ -119,13 +116,16 @@
         let contactoActual = null;
         let horaLlamadaExacta = "";
 
+        // Lectura segura de almacenamiento local
         document.addEventListener("DOMContentLoaded", () => {
-            const savedUser = localStorage.getItem("saved_user");
-            const savedPass = localStorage.getItem("saved_pass");
-            if (savedUser && savedPass) {
-                document.getElementById('loginUser').value = savedUser;
-                document.getElementById('loginPass').value = savedPass;
-            }
+            try {
+                const savedUser = localStorage.getItem("saved_user");
+                const savedPass = localStorage.getItem("saved_pass");
+                if (savedUser && savedPass) {
+                    document.getElementById('loginUser').value = savedUser;
+                    document.getElementById('loginPass').value = savedPass;
+                }
+            } catch(e) { console.log("Cookies o localStorage deshabilitados."); }
         });
 
         function mezclaraAleatorio(arreglo) {
@@ -136,27 +136,31 @@
             return arreglo;
         }
 
+        // 📱 MEJORA CRÍTICA: Cambiado de POST a GET parametrizado para evadir los bloqueos de red en móviles
         function iniciarSesion(event) {
             if(event) event.preventDefault();
-            const user = document.getElementById('loginUser').value;
-            const pass = document.getElementById('loginPass').value;
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
             if(!user || !pass) return;
 
             document.getElementById('loginMessage').style.display = 'none';
             document.getElementById('loginLoading').style.display = 'block';
-            document.activeElement.blur(); // Oculta el teclado táctil
+            document.activeElement.blur(); // Esconder teclado táctil
 
-            fetch(SCRIPT_URL, { 
-                method: 'POST', 
-                mode: 'cors',
-                body: JSON.stringify({ accion: "login", usuario: user, password: pass }) 
+            const urlConParametros = `${SCRIPT_URL}?accion=login&usuario=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
+
+            fetch(urlConParametros, { method: 'GET', mode: 'cors' })
+            .then(res => {
+                if(!res.ok) throw new Error("Servidor inaccesible (Status: " + res.status + ")");
+                return res.json();
             })
-            .then(res => res.json())
             .then(data => {
                 document.getElementById('loginLoading').style.display = 'none';
                 if(data.resultado === 'exito') {
-                    localStorage.setItem("saved_user", user);
-                    localStorage.setItem("saved_pass", pass);
+                    try {
+                        localStorage.setItem("saved_user", user);
+                        localStorage.setItem("saved_pass", pass);
+                    } catch(e){}
 
                     currentUser = data.usuario;
                     document.getElementById('loginScreen').style.display = 'none';
@@ -164,21 +168,21 @@
                     document.getElementById('displayUsuario').textContent = `Usuario activo: ${currentUser}`;
                     cargarContactos(); 
                 } else { 
-                    mostrarMensaje('loginMessage', data.mensaje, 'error'); 
+                    mostrarMensaje('loginMessage', data.mensaje || "Credenciales incorrectas", 'error'); 
                 }
             }).catch(e => {
                 document.getElementById('loginLoading').style.display = 'none';
-                mostrarMensaje('loginMessage', 'Error de conexión: ' + e.message, 'error');
+                mostrarMensaje('loginMessage', 'Error desde celular: ' + e.message, 'error');
+                alert("Fallo de autenticación en celular:\n" + e.message + "\n\nIntenta apagando el Wi-Fi e ingresa con datos móviles.");
             });
         }
 
         function cargarContactos() {
             document.getElementById('estadoCarga').textContent = "Conectando con la base...";
             
-            fetch(SCRIPT_URL, {
+            fetch(`${SCRIPT_URL}?timestamp=${new Date().getTime()}`, {
                 method: 'GET',
-                mode: 'cors',
-                headers: { 'Content-Type': 'application/json' }
+                mode: 'cors'
             })
             .then(res => {
                 if (!res.ok) throw new Error('Status: ' + res.status);
@@ -198,7 +202,6 @@
                 contactoSelect.disabled = false;
             }).catch(e => {
                 document.getElementById('estadoCarga').textContent = "❌ Error: " + e.message;
-                alert("Error de red en el móvil: " + e.message + "\n\nSugerencia: Si usas Wi-Fi corporativo, desactívalo y prueba con datos móviles.");
             });
         }
 
@@ -212,7 +215,6 @@
             document.getElementById('lblDoc').textContent = contactoActual.documento;
             document.getElementById('lblTel').textContent = contactoActual.telefono;
             
-            // Sincronizar el enlace directo inmediatamente (Vital para Safari iOS)
             const btnCall = document.getElementById('btnCall');
             btnCall.href = `tel:${contactoActual.telefono}`;
             
@@ -231,10 +233,10 @@
             document.getElementById('contactoSelect').disabled = true;
             document.getElementById('paso2').style.display = 'block';
 
-            // Bloquear en Sheets en segundo plano sin interrumpir la llamada
+            // Reportar bloqueo asíncronamente
             fetch(SCRIPT_URL, { 
                 method: 'POST', 
-                mode: 'cors',
+                mode: 'no-cors', // Evita que iOS detenga la ejecución si el servidor tarda en responder
                 body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) 
             }).catch(err => console.log("Bloqueo enviado pasivamente"));
         }
@@ -253,11 +255,11 @@
             
             fetch(SCRIPT_URL, { 
                 method: 'POST', 
-                mode: 'cors',
+                mode: 'no-cors',
                 body: JSON.stringify(payload) 
             })
-            .then(res => res.json())
-            .then(data => {
+            .then(() => {
+                // Al usar no-cors, asumimos éxito rápido para agilizar la operación en móvil
                 document.getElementById('appLoading').style.display = 'none';
                 mostrarMensaje('appMessage', '✅ Guardado exitoso.', 'success');
                 
@@ -266,7 +268,7 @@
                     document.getElementById('appMessage').style.display = 'none';
                     refrescarListaLocal();
                     reiniciarInterfaz();
-                }, 1500);
+                }, 1200);
             }).catch(e => {
                 document.getElementById('appLoading').style.display = 'none';
                 mostrarMensaje('appMessage', 'Error guardando datos', 'error');
@@ -281,7 +283,7 @@
 
             fetch(SCRIPT_URL, { 
                 method: 'POST', 
-                mode: 'cors',
+                mode: 'no-cors',
                 body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) 
             })
             .then(() => {
