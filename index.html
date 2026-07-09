@@ -2,35 +2,31 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Llamadas</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; }
-        .container { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 450px; width: 100%; }
-        h1 { color: #333; margin-bottom: 10px; text-align: center; font-size: 22px; }
-        .subtitle { text-align: center; color: #999; margin-bottom: 25px; font-size: 13px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 450px; width: 100%; }
+        h1 { color: #333; margin-bottom: 10px; text-align: center; font-size: 24px; }
+        .subtitle { text-align: center; color: #999; margin-bottom: 25px; font-size: 12px; }
         #loginScreen { display: block; }
         #appScreen { display: none; }
-        .user-badge { background: #e9ecef; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-weight: bold; color: #495057; font-size: 14px;}
+        .user-badge { background: #e9ecef; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-weight: bold; color: #495057; font-size: 14px;}
         .form-group { margin-bottom: 20px; }
-        label { display: block; color: #555; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
-        
-        select, textarea, input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; font-family: inherit; transition: border-color 0.3s; background-color: #fff; color: #000; -webkit-appearance: none; }
-        select { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M0 3l5 5 5-5z' fill='%23666'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
+        label { display: block; color: #555; font-weight: 600; margin-bottom: 8px; font-size: 13px; }
+        select, textarea, input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; transition: border-color 0.3s; }
         select:focus, textarea:focus, input:focus { outline: none; border-color: #667eea; }
-        textarea { resize: vertical; min-height: 90px; }
-        
-        .info-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 14px; margin-bottom: 20px; border-radius: 0 8px 8px 0; display: none; font-size: 15px; }
-        .info-box p { margin-bottom: 6px; color: #444; }
-        
-        .btn-call { display: none; width: 100%; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 600; text-align: center; text-decoration: none; cursor: pointer; transition: all 0.3s; margin-bottom: 12px; -webkit-appearance: none; background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; }
-        
-        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-bottom: 12px; -webkit-appearance: none; }
+        textarea { resize: vertical; min-height: 80px; }
+        .info-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 12px; margin-bottom: 20px; border-radius: 0 8px 8px 0; display: none; font-size: 14px; }
+        .info-box p { margin-bottom: 5px; color: #444; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-bottom: 10px; }
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3); }
+        .btn-call { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: none; }
         .btn-next { background: #28a745; color: white; }
         .btn-cancel { background: #f0f0f0; color: #666; }
-        .message { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; font-size: 14px; display: none; }
+        .message { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; font-size: 13px; display: none; }
         .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
         .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
         .loading { display: none; text-align: center; margin-top: 15px; }
@@ -50,7 +46,7 @@
             <form id="loginForm" onsubmit="iniciarSesion(event)">
                 <div class="form-group">
                     <label for="loginUser">Usuario</label>
-                    <input type="text" id="loginUser" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" required>
+                    <input type="text" id="loginUser" name="username" autocomplete="username" required>
                 </div>
                 <div class="form-group">
                     <label for="loginPass">Contraseña</label>
@@ -63,27 +59,26 @@
             <div class="loading" id="loginLoading"><div class="spinner"></div><p style="margin-top: 10px;">Validando...</p></div>
         </div>
 
-        <!-- PANTALLA PRINCIPAL -->
+        <!-- PANTALLA PRINCIPAL (SIN FILTRO DE CARGO) -->
         <div id="appScreen">
-            <h1>📞 Contact center <br>GLOBAL LIFE AMBULANCIAS SAS<br>Talento Humano</h1>
+            <h1>📞 Contact center</h1>
             <div class="user-badge" id="displayUsuario">Usuario: -</div>
-            <p class="subtitle" id="estadoCarga">Cargando Candidatos...</p>
+            <p class="subtitle" id="estadoCarga">Cargando pacientes...</p>
             
             <form id="callForm">
                 <div class="form-group">
-                    <label for="contactoSelect">Seleccionar Candidato</label>
+                    <label for="contactoSelect">Seleccionar Paciente</label>
                     <select id="contactoSelect" onchange="seleccionarContacto()" disabled>
                         <option value="">Cargando datos...</option>
                     </select>
                 </div>
                 
                 <div class="info-box" id="infoBox">
-                    <p><strong>Cargo:</strong> <span id="lblCargo" style="color: #764ba2; font-weight: bold;"></span></p>
                     <p><strong>Documento:</strong> <span id="lblDoc"></span></p>
                     <p><strong>Teléfono:</strong> <span id="lblTel"></span></p>
                 </div>
 
-                <a href="#" class="btn-call" id="btnCall" onclick="ejecutarFlujoLlamada(event)">☎️ Iniciar Llamada</a>
+                <button type="button" class="btn-call" id="btnCall" onclick="iniciarLlamada()">☎️ Iniciar Llamada</button>
                 
                 <div id="paso2">
                     <div class="form-group">
@@ -109,93 +104,65 @@
     </div>
     
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzowZmf55VS9g19AFnzKWK3DMAwFV_e6ysEn8sV9_RDLvccb7R7cBpYh6utjUSW5Q47/exec';
+        // ⚠️ PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_NCzbTDgppL4X5kpRZyHpQXUBIqJVpyeu4mRB1Pc5yGmdMOCuZ7JzpesT9X2_uv5p/exec';
         
         let currentUser = ""; 
         let contactosData = [];
         let contactoActual = null;
         let horaLlamadaExacta = "";
 
-        document.addEventListener("DOMContentLoaded", () => {
-            try {
-                const savedUser = localStorage.getItem("saved_user");
-                const savedPass = localStorage.getItem("saved_pass");
-                if (savedUser && savedPass) {
-                    document.getElementById('loginUser').value = savedUser;
-                    document.getElementById('loginPass').value = savedPass;
-                }
-            } catch(e) { console.log("localStorage bloqueado por el navegador móvil."); }
-        });
-
-        function mezclarAleatorio(arreglo) {
-            for (let i = arreglo.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]];
-            }
-            return arreglo;
-        }
-
-        // 📱 MEJORA PARA MÓVILES: Se añade cabecera mode:'cors' explícitamente para que los celulares acepten la redirección segura de Google
         function iniciarSesion(event) {
             if(event) event.preventDefault();
-            const user = document.getElementById('loginUser').value.trim();
-            const pass = document.getElementById('loginPass').value.trim();
+            const user = document.getElementById('loginUser').value;
+            const pass = document.getElementById('loginPass').value;
             if(!user || !pass) return;
 
             document.getElementById('loginMessage').style.display = 'none';
             document.getElementById('loginLoading').style.display = 'block';
-            
-            // Oculta el teclado del celular inmediatamente para mejorar la experiencia
-            document.activeElement.blur();
 
-            fetch(SCRIPT_URL, { 
-                method: 'POST', 
-                mode: 'cors',
-                body: JSON.stringify({ accion: "login", usuario: user, password: pass }) 
-            })
-            .then(res => {
-                if(!res.ok) throw new Error("Error HTTP de red: " + res.status);
-                return res.json();
-            })
+            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "login", usuario: user, password: pass }) })
+            .then(res => res.json())
             .then(data => {
                 document.getElementById('loginLoading').style.display = 'none';
-                if(data && data.resultado === 'exito') {
-                    try {
-                        localStorage.setItem("saved_user", user);
-                        localStorage.setItem("saved_pass", pass);
-                    } catch(e){}
-
+                if(data.resultado === 'exito') {
                     currentUser = data.usuario;
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('appScreen').style.display = 'block';
                     document.getElementById('displayUsuario').textContent = `Usuario activo: ${currentUser}`;
                     cargarContactos(); 
                 } else { 
-                    mostrarMensaje('loginMessage', data.mensaje || "Datos incorrectos", 'error'); 
+                    mostrarMensaje('loginMessage', data.mensaje, 'error'); 
                 }
             }).catch(e => {
                 document.getElementById('loginLoading').style.display = 'none';
-                mostrarMensaje('loginMessage', 'Error de red en celular. Asegúrate de tener buena conexión.', 'error');
-                console.error(e);
+                mostrarMensaje('loginMessage', 'Error de conexión', 'error');
             });
         }
 
         function cargarContactos() {
             document.getElementById('estadoCarga').textContent = "Conectando con la base...";
-            fetch(SCRIPT_URL, { method: 'GET', mode: 'cors' })
+            fetch(SCRIPT_URL)
                 .then(res => res.json())
                 .then(data => {
-                    contactosData = mezclarAleatorio(data);
+                    contactosData = data;
                     const contactoSelect = document.getElementById('contactoSelect');
                     
-                    if (contactosData.length === 0) {
+                    if (data.length === 0) {
                         contactoSelect.innerHTML = '<option value="">Sin pendientes en la base</option>';
                         document.getElementById('estadoCarga').textContent = "¡Base terminada!";
                         return;
                     }
 
-                    refrescarListaLocal(); 
+                    // Forma optimizada de cargar la lista para evitar que el celular colapse
+                    let opciones = '<option value="">-- Selecciona un Paciente --</option>';
+                    data.forEach(c => {
+                        opciones += `<option value="${c.fila}">${c.nombre} - ${c.documento}</option>`;
+                    });
+                    
+                    contactoSelect.innerHTML = opciones;
                     contactoSelect.disabled = false;
+                    document.getElementById('estadoCarga').textContent = `Total pendientes: ${data.length}`;
                 }).catch(e => {
                     document.getElementById('estadoCarga').textContent = "❌ Error cargando datos.";
                 });
@@ -206,63 +173,58 @@
             if (!fila) { reiniciarInterfaz(); return; }
 
             contactoActual = contactosData.find(c => c.fila === fila);
-            
-            document.getElementById('lblCargo').textContent = contactoActual.cargo || "No especificado";
             document.getElementById('lblDoc').textContent = contactoActual.documento;
             document.getElementById('lblTel').textContent = contactoActual.telefono;
-            
-            const btnCall = document.getElementById('btnCall');
-            btnCall.href = `tel:${contactoActual.telefono}`;
-            
             document.getElementById('infoBox').style.display = 'block';
-            btnCall.style.display = 'block';
+            document.getElementById('btnCall').style.display = 'block';
         }
 
-        function ejecutarFlujoLlamada(event) {
-            if (!contactoActual) { event.preventDefault(); return; }
+        function iniciarLlamada() {
+            if (!contactoActual) return;
             
-            const fecha = new Date();
-            horaLlamadaExacta = fecha.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit', hour12: true });
-            document.getElementById('horaDisplay').textContent = horaLlamadaExacta;
-
             document.getElementById('btnCall').style.display = 'none';
-            document.getElementById('contactoSelect').disabled = true;
-            document.getElementById('paso2').style.display = 'block';
+            document.getElementById('appLoading').style.display = 'block';
+            document.getElementById('loadingText').textContent = "Bloqueando contacto...";
 
-            fetch(SCRIPT_URL, { 
-                method: 'POST', 
-                mode: 'cors',
-                body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) 
-            }).catch(err => console.log("Bloqueo enviado pasivamente"));
+            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('appLoading').style.display = 'none';
+                const fecha = new Date();
+                horaLlamadaExacta = fecha.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit', hour12: true });
+                document.getElementById('horaDisplay').textContent = horaLlamadaExacta;
+                
+                window.location.href = `tel:${contactoActual.telefono}`;
+                
+                document.getElementById('contactoSelect').disabled = true;
+                document.getElementById('paso2').style.display = 'block';
+            });
         }
         
         function guardarYSiguiente() {
             document.getElementById('loadingText').textContent = "Guardando...";
             document.getElementById('appLoading').style.display = 'block';
             document.getElementById('paso2').style.display = 'none'; 
-            document.activeElement.blur();
-
+            
             const payload = { 
                 accion: "guardar", fila: contactoActual.fila, hora: horaLlamadaExacta, 
                 observacion: document.getElementById('observacion').value, 
                 novedad: document.getElementById('novedad').value, usuario_call: currentUser 
             };
             
-            fetch(SCRIPT_URL, { method: 'POST', mode: 'cors', body: JSON.stringify(payload) })
-            .then(() => {
+            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(data => {
                 document.getElementById('appLoading').style.display = 'none';
                 mostrarMensaje('appMessage', '✅ Guardado exitoso.', 'success');
                 
+                // Actualiza la lista sin recargar toda la página
                 contactosData = contactosData.filter(c => c.fila !== contactoActual.fila);
                 setTimeout(() => {
                     document.getElementById('appMessage').style.display = 'none';
                     refrescarListaLocal();
                     reiniciarInterfaz();
                 }, 1500);
-            }).catch(e => {
-                document.getElementById('appLoading').style.display = 'none';
-                refrescarListaLocal();
-                reiniciarInterfaz();
             });
         }
 
@@ -272,11 +234,8 @@
             document.getElementById('appLoading').style.display = 'block';
             document.getElementById('loadingText').textContent = "Liberando contacto...";
 
-            fetch(SCRIPT_URL, { method: 'POST', mode: 'cors', body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) })
+            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) })
             .then(() => {
-                document.getElementById('appLoading').style.display = 'none';
-                reiniciarInterfaz();
-            }).catch(() => {
                 document.getElementById('appLoading').style.display = 'none';
                 reiniciarInterfaz();
             });
@@ -284,10 +243,8 @@
 
         function refrescarListaLocal() {
             const contactoSelect = document.getElementById('contactoSelect');
-            let opciones = '<option value="">-- Selecciona un Candidato --</option>';
-            contactosData.forEach(c => { 
-                opciones += `<option value="${c.fila}">${c.nombre} - ${c.cargo || 'Sin cargo'}</option>`; 
-            });
+            let opciones = '<option value="">-- Selecciona un Paciente --</option>';
+            contactosData.forEach(c => { opciones += `<option value="${c.fila}">${c.nombre} - ${c.documento}</option>`; });
             contactoSelect.innerHTML = opciones;
             document.getElementById('estadoCarga').textContent = `Total pendientes: ${contactosData.length}`;
         }
@@ -297,11 +254,9 @@
             document.getElementById('contactoSelect').value = "";
             document.getElementById('infoBox').style.display = 'none';
             document.getElementById('btnCall').style.display = 'none';
-            document.getElementById('btnCall').href = "#";
             document.getElementById('paso2').style.display = 'none';
             document.getElementById('observacion').value = "";
             document.getElementById('novedad').value = "Ok";
-            document.getElementById('lblCargo').textContent = "";
             contactoActual = null;
             horaLlamadaExacta = "";
         }
