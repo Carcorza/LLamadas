@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Llamadas</title>
+    <title>Sistema de Llamadas TH</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
@@ -24,6 +24,7 @@
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .btn-link { background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%); color: white; margin-bottom: 20px; }
         .btn-call { background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; display: none; }
+        .btn-abort { background: #dc3545; color: white; display: none; } /* Nuevo estilo para el botón abortar */
         .btn-next { background: #28a745; color: white; }
         .btn-cancel { background: #f0f0f0; color: #666; }
         .message { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; font-size: 13px; display: none; }
@@ -73,7 +74,9 @@
                 <p><strong>Teléfono:</strong> <span id="lblTel"></span></p>
             </div>
 
+            <!-- BOTONES DE ACCIÓN PARA EL CONTACTO SELECCIONADO -->
             <a href="#" class="btn-call" id="btnCall" onclick="iniciarLlamada(event)">☎️ Iniciar Llamada</a>
+            <button type="button" class="btn-abort" id="btnAbort" onclick="abortarSeleccion()">❌ Cancelar Gestión</button>
             
             <div id="paso2" style="display:none;">
                 <div class="form-group">
@@ -186,6 +189,7 @@
             
             document.getElementById('infoBox').style.display = 'block';
             document.getElementById('btnCall').style.display = 'block';
+            document.getElementById('btnAbort').style.display = 'block'; // Muestra el botón de cancelar gestión
         }
 
         function iniciarLlamada(e) {
@@ -195,11 +199,28 @@
             document.getElementById('horaDisplay').textContent = horaLlamadaExacta;
             
             document.getElementById('btnCall').style.display = 'none';
+            document.getElementById('btnAbort').style.display = 'none'; // Oculta el botón abortar al iniciar
             document.getElementById('contactoSelect').disabled = true;
             document.getElementById('cargoFilter').disabled = true;
             document.getElementById('paso2').style.display = 'block';
             
             fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) });
+        }
+
+        // NUEVA FUNCIÓN: Cancela la selección actual liberando el contacto en la hoja de cálculo
+        function abortarSeleccion() {
+            if(!contactoActual) return;
+            document.getElementById('loadingText').textContent = "Liberando...";
+            document.getElementById('appLoading').style.display = 'block';
+            document.getElementById('btnCall').style.display = 'none';
+            document.getElementById('btnAbort').style.display = 'none';
+
+            // Ejecuta el desbloqueo directo en Sheets para borrar "En proceso"
+            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) })
+            .then(() => {
+                document.getElementById('appLoading').style.display = 'none';
+                reiniciarInterfaz(true); // Devuelve la pantalla al estado inicial limpio
+            });
         }
 
         function guardarYSiguiente() {
@@ -251,6 +272,7 @@
             document.getElementById('contactoSelect').value = "";
             document.getElementById('infoBox').style.display = 'none';
             document.getElementById('btnCall').style.display = 'none';
+            document.getElementById('btnAbort').style.display = 'none'; // Limpia el botón abortar
             document.getElementById('btnCall').href = "#";
             document.getElementById('paso2').style.display = 'none';
             document.getElementById('observacion').value = "";
