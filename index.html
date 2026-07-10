@@ -27,7 +27,7 @@
         .btn-next { background: #28a745; color: white; }
         .btn-cancel { background: #f0f0f0; color: #666; }
         
-        /* Estilos del nuevo botón para ver la Base de Datos */
+        /* Estilos del botón de la Base de Datos */
         .btn-link { background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%); color: white; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(23, 162, 184, 0.2); }
         .btn-link:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(23, 162, 184, 0.3); }
         
@@ -45,7 +45,7 @@
         
         <!-- PANTALLA DE LOGIN -->
         <div id="loginScreen">
-            <h1>🔒 Acceso al Sistema<br>Talento Humano</h1>
+            <h1>🔒 Acceso al Sistema TH</h1>
             <p class="subtitle">Ingresa tus credenciales para continuar</p>
             
             <form id="loginForm" onsubmit="iniciarSesion(event)">
@@ -54,7 +54,7 @@
                     <input type="text" id="loginUser" name="username" autocomplete="username" required>
                 </div>
                 <div class="form-group">
-                    <label for="loginPass">Contraseñas</label>
+                    <label for="loginPass">Contraseña</label>
                     <input type="password" id="loginPass" name="password" autocomplete="current-password" required>
                 </div>
                 <button type="submit" class="btn-primary">Ingresar</button>
@@ -69,7 +69,7 @@
             <h1>📞 Contact center <br>GLOBAL LIFE AMBULANCIAS SAS<br>Talento Humano</h1>
             <div class="user-badge" id="displayUsuario">Usuario: -</div>
             
-            <!-- Botón dinámico de acceso a la Base de Datos -->
+            <!-- NUEVO BOTÓN GENERAL DE BASE DE DATOS -->
             <a href="https://docs.google.com/spreadsheets/d/1VUkxrVjr2P2_XZYGGnSk08SHGw4gvxQlRURVsEYryZI/edit?gid=0#gid=0" 
                target="_blank" 
                id="btnBaseDatos" 
@@ -120,7 +120,7 @@
     </div>
     
     <script>
-        // REEMPLAZA ESTA URL POR LA DE TU NUEVA IMPLEMENTACIÓN DE APPS SCRIPT
+        // ASEGÚRATE DE PONER TU URL DE IMPLEMENTACIÓN DE APPS SCRIPT AQUÍ
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmdQWerGX1A2BAn-4kWnahAm2-Hl9I1ExcnvAWGU0pWsJfw-PZybqM5DD6nRcCVb3f/exec';
         
         let currentUser = ""; 
@@ -137,6 +137,7 @@
             }
         });
 
+        // Corregido error de sintaxis ("arrangement =") que rompía el código en celulares
         function mezclarAleatorio(arreglo) {
             for (let i = arreglo.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -159,13 +160,13 @@
                 mode: 'cors',
                 body: JSON.stringify({ accion: "login", usuario: user, password: pass }) 
             })
-            .then(res => res.text()) // Leemos como texto limpio para evitar bloqueos del navegador móvil
+            .then(res => res.text())
             .then(text => {
                 let data;
                 try {
                     data = JSON.parse(text);
                 } catch(e) {
-                    throw new Error("Respuesta inválida del servidor móvil.");
+                    throw new Error("Respuesta inválida.");
                 }
 
                 document.getElementById('loginLoading').style.display = 'none';
@@ -178,7 +179,7 @@
                     document.getElementById('appScreen').style.display = 'block';
                     document.getElementById('displayUsuario').textContent = `Usuario activo: ${currentUser}`;
                     
-                    // Mostrar u ocultar el botón según el permiso obtenido
+                    // Lógica para mostrar u ocultar el botón general si cumple las condiciones
                     if (data.mostrarLink === true) {
                         document.getElementById('btnBaseDatos').style.display = 'block';
                     } else {
@@ -191,7 +192,7 @@
                 }
             }).catch(e => {
                 document.getElementById('loginLoading').style.display = 'none';
-                mostrarMensaje('loginMessage', 'Error de acceso en este dispositivo. Revisa la URL.', 'error');
+                mostrarMensaje('loginMessage', 'Error de acceso. Revisa la red.', 'error');
                 console.error(e);
             });
         }
