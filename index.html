@@ -27,7 +27,7 @@
         .btn-next { background: #28a745; color: white; }
         .btn-cancel { background: #f0f0f0; color: #666; }
         
-        /* Estilos del botón de la Base de Datos */
+        /* Diseño del botón dinámico de Base de Datos */
         .btn-link { background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%); color: white; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(23, 162, 184, 0.2); }
         .btn-link:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(23, 162, 184, 0.3); }
         
@@ -45,7 +45,7 @@
         
         <!-- PANTALLA DE LOGIN -->
         <div id="loginScreen">
-            <h1>🔒 Acceso al Sistema TH</h1>
+            <h1>🔒 Acceso al Sistema</h1>
             <p class="subtitle">Ingresa tus credenciales para continuar</p>
             
             <form id="loginForm" onsubmit="iniciarSesion(event)">
@@ -69,8 +69,8 @@
             <h1>📞 Contact center <br>GLOBAL LIFE AMBULANCIAS SAS<br>Talento Humano</h1>
             <div class="user-badge" id="displayUsuario">Usuario: -</div>
             
-            <!-- NUEVO BOTÓN GENERAL DE BASE DE DATOS -->
-            <a href="https://docs.google.com/spreadsheets/d/1VUkxrVjr2P2_XZYGGnSk08SHGw4gvxQlRURVsEYryZI/edit?gid=0#gid=0" 
+            <!-- EL BOTÓN YA NO TIENE UNA RUTA FIJA, SE ASIGNA DESDE LA BASE DE DATOS -->
+            <a href="#" 
                target="_blank" 
                id="btnBaseDatos" 
                class="btn-link" 
@@ -120,7 +120,7 @@
     </div>
     
     <script>
-        // ASEGÚRATE DE PONER TU URL DE IMPLEMENTACIÓN DE APPS SCRIPT AQUÍ
+        // Recuerda colocar aquí la URL generada en tu última implementación
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmdQWerGX1A2BAn-4kWnahAm2-Hl9I1ExcnvAWGU0pWsJfw-PZybqM5DD6nRcCVb3f/exec';
         
         let currentUser = ""; 
@@ -137,7 +137,6 @@
             }
         });
 
-        // Corregido error de sintaxis ("arrangement =") que rompía el código en celulares
         function mezclarAleatorio(arreglo) {
             for (let i = arreglo.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -179,9 +178,11 @@
                     document.getElementById('appScreen').style.display = 'block';
                     document.getElementById('displayUsuario').textContent = `Usuario activo: ${currentUser}`;
                     
-                    // Lógica para mostrar u ocultar el botón general si cumple las condiciones
-                    if (data.mostrarLink === true) {
-                        document.getElementById('btnBaseDatos').style.display = 'block';
+                    // Si el usuario tiene permiso "si", inyecta la ruta de la base de datos en el botón y lo muestra
+                    if (data.mostrarLink === true && data.ruta !== "") {
+                        const btnDb = document.getElementById('btnBaseDatos');
+                        btnDb.href = data.ruta;
+                        btnDb.style.display = 'block';
                     } else {
                         document.getElementById('btnBaseDatos').style.display = 'none';
                     }
