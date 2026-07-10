@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Llamadas TH</title>
+    <title>Sistema de Llamadas</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
@@ -51,7 +51,7 @@
 
         <!-- PANTALLA PRINCIPAL -->
         <div id="appScreen">
-            <h1>📞 Contact Center<br>Talento Humano</h1>
+            <h1>📞 Contact Center</h1>
             <div class="user-badge" id="displayUsuario"></div>
             
             <a href="https://docs.google.com/spreadsheets/d/1VUkxrVjr2P2_XZYGGnSk08SHGw4gvxQlRURVsEYryZI/edit?gid=0#gid=0" 
@@ -79,12 +79,15 @@
                 <div class="form-group">
                     <label style="color: #28a745; margin-bottom:10px;">Llamada en progreso a las: <br><strong><span id="horaDisplay"></span></strong></label>
                     <label>Observación</label>
-                    <textarea id="observacion" placeholder="Ej: No contesta..."></textarea>
+                    <textarea id="observacion" placeholder="Escribe aquí los comentarios de la llamada..."></textarea>
                 </div>
-                <div class="form-group">
+
+                <!-- EL CAMPO SIGUE EXISTIENDO EXACTAMENTE IGUAL PERO OCULTO AL OPERADOR -->
+                <div class="form-group" style="display: none;">
                     <label>Novedad</label>
                     <input type="text" id="novedad" value="Ok">
                 </div>
+
                 <button type="button" class="btn-next" onclick="guardarYSiguiente()">Guardar y Finalizar ⏭️</button>
                 <button type="button" class="btn-cancel" onclick="cancelarLlamada()">Cancelar Llamada</button>
             </div>
@@ -95,10 +98,11 @@
     </div>
     
     <script>
-        // REEMPLAZA CON TU URL DE MACRO DE GOOGLE APPS SCRIPT REAL
+        // REEMPLAZA CON TU URL DE MACRO DE GOOGLE APPS SCRIPT REAL (LA QUE TERMINA EN /exec)
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxwONleXf8MMH1vQOTZIl04egU0QfQfOoQrZ27U7TmOvjCh_jcxRfbM-gr3___Jxdy5/exec';
         
-        let contactosData = [], contactosFiltrados = [], contactoActual = null, currentUser = "", horaLlamadaExacta = "";
+        let contactosData = [], contactosFiltrados = [], contactoActual = null, currentUser = "";
+        let horaLlamadaExacta = "";
 
         function iniciarSesion(e) {
             e.preventDefault();
@@ -134,7 +138,7 @@
             fetch(SCRIPT_URL)
             .then(res => res.json())
             .then(data => {
-                contactosData = data.sort(() => Math.random() - 0.5); // Aleatorio
+                contactosData = data.sort(() => Math.random() - 0.5); // Mezcla aleatoria
                 contactosFiltrados = contactosData;
                 
                 actualizarSelectorCargos();
@@ -208,7 +212,7 @@
                 fila: contactoActual.fila,
                 hora: horaLlamadaExacta,
                 observacion: document.getElementById('observacion').value,
-                novedad: document.getElementById('novedad').value,
+                novedad: document.getElementById('novedad').value, // Lee el "Ok" del input oculto
                 usuario_call: currentUser
             };
 
@@ -217,7 +221,7 @@
             .then(() => {
                 document.getElementById('appLoading').style.display = 'none';
                 
-                // Remover localmente para no refrescar la web entera
+                // Quitamos el contacto gestionado localmente para que desaparezca
                 contactosData = contactosData.filter(c => c.fila !== contactoActual.fila);
                 let filtroActual = document.getElementById('cargoFilter').value;
                 contactosFiltrados = (filtroActual === "TODOS") ? contactosData : contactosData.filter(c => (c.cargo ? String(c.cargo).trim() : "Sin cargo") === filtroActual);
@@ -250,7 +254,7 @@
             document.getElementById('btnCall').href = "#";
             document.getElementById('paso2').style.display = 'none';
             document.getElementById('observacion').value = "";
-            document.getElementById('novedad').value = "Ok";
+            document.getElementById('novedad').value = "Ok"; // Resetea a Ok en background
             contactoActual = null;
             horaLlamadaExacta = "";
         }
