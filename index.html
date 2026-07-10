@@ -40,7 +40,7 @@
         
         <!-- PANTALLA DE LOGIN -->
         <div id="loginScreen">
-            <h1>🔒 Acceso al Sistema</h1>
+            <h1>🔒 Acceso al Sistema de llamadas</h1>
             <p class="subtitle">Ingresa tus credenciales para continuar</p>
             
             <form id="loginForm" onsubmit="iniciarSesion(event)">
@@ -116,7 +116,7 @@
     </div>
     
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzexM63BmQTP0w0YtQ2Ge4GVvnccfyv5p-d2-1UqyXHJD0WbuHbNhF5Q1SFPA0aQsQN/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxeG4OgvmbhU4x8OMH1QeIJQZyiy0cRP9fRUkHbDGm_VFI9g2w82TC_sjNZCEar9meG/exec';
         
         let currentUser = ""; 
         let contactosData = [];
@@ -133,7 +133,7 @@
         });
 
         function mezclarAleatorio(arreglo) {
-            for (let i = arreglo.length - 1; i > 0; i--) {
+            for (let i = arrangement = arreglo.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]];
             }
@@ -149,7 +149,12 @@
             document.getElementById('loginMessage').style.display = 'none';
             document.getElementById('loginLoading').style.display = 'block';
 
-            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "login", usuario: user, password: pass }) })
+            // Solucionado para Celulares: Añadidos Headers de texto plano para evitar bloqueos CORS en móvil
+            fetch(SCRIPT_URL, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ accion: "login", usuario: user, password: pass }) 
+            })
             .then(res => res.json())
             .then(data => {
                 document.getElementById('loginLoading').style.display = 'none';
@@ -162,7 +167,6 @@
                     document.getElementById('appScreen').style.display = 'block';
                     document.getElementById('displayUsuario').textContent = `Usuario activo: ${currentUser}`;
                     
-                    // Valida si el servidor autorizó ver el hipervínculo general
                     if (data.mostrarLink === true) {
                         document.getElementById('contenedorLink').style.display = 'block';
                     } else {
@@ -175,7 +179,8 @@
                 }
             }).catch(e => {
                 document.getElementById('loginLoading').style.display = 'none';
-                mostrarMensaje('loginMessage', 'Error de conexión', 'error');
+                mostrarMensaje('loginMessage', 'Error de conexión con el servidor', 'error');
+                console.error(e);
             });
         }
 
@@ -210,7 +215,6 @@
             document.getElementById('lblDoc').textContent = contactoActual.documento;
             document.getElementById('lblTel').textContent = contactoActual.telefono;
             
-            // Inyecta dinámicamente la URL telefónica nativa en la etiqueta <a>
             const btnCall = document.getElementById('btnCall');
             btnCall.href = `tel:${contactoActual.telefono}`;
 
@@ -232,9 +236,10 @@
             document.getElementById('contactoSelect').disabled = true;
             document.getElementById('paso2').style.display = 'block';
 
-            // Ejecuta el bloqueo de la fila en segundo plano
+            // Solucionado para Celulares: Añadidos Headers de texto plano
             fetch(SCRIPT_URL, { 
                 method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) 
             }).catch(e => console.log("Error registrando bloqueo: ", e));
         }
@@ -250,7 +255,12 @@
                 novedad: document.getElementById('novedad').value, usuario_call: currentUser 
             };
             
-            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+            // Solucionado para Celulares: Añadidos Headers de texto plano
+            fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload) 
+            })
             .then(res => res.json())
             .then(data => {
                 document.getElementById('appLoading').style.display = 'none';
@@ -271,7 +281,12 @@
             document.getElementById('appLoading').style.display = 'block';
             document.getElementById('loadingText').textContent = "Liberando contacto...";
 
-            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) })
+            // Solucionado para Celulares: Añadidos Headers de texto plano
+            fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) 
+            })
             .then(() => {
                 document.getElementById('appLoading').style.display = 'none';
                 reiniciarInterfaz();
