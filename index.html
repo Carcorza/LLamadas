@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Llamadas TH</title>
+    <title>Sistema de Llamadas</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
@@ -24,7 +24,7 @@
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .btn-link { background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%); color: white; margin-bottom: 20px; }
         .btn-call { background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; display: none; }
-        .btn-abort { background: #dc3545; color: white; display: none; } /* Nuevo estilo para el botón abortar */
+        .btn-abort { background: #dc3545; color: white; display: none; } 
         .btn-next { background: #28a745; color: white; }
         .btn-cancel { background: #f0f0f0; color: #666; }
         .message { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; font-size: 13px; display: none; }
@@ -63,6 +63,12 @@
                 <select id="cargoFilter" onchange="aplicarFiltroCargo()" disabled><option>Cargando cargos...</option></select>
             </div>
 
+            <!-- CAMPO DE BÚSQUEDA INTELIGENTE AMPLIADO -->
+            <div class="form-group">
+                <label>🔍 Buscar por Cédula, Celular o Nombre (ej: car co za)</label>
+                <input type="text" id="searchBar" placeholder="Escribe cédula, celular o nombre..." oninput="filtrarPorTexto()" disabled>
+            </div>
+
             <div class="form-group">
                 <label>Seleccionar Candidato</label>
                 <select id="contactoSelect" onchange="seleccionarContacto()" disabled><option>Cargando candidatos...</option></select>
@@ -85,7 +91,6 @@
                     <textarea id="observacion" placeholder="Escribe aquí los comentarios de la llamada..."></textarea>
                 </div>
 
-                <!-- EL CAMPO SIGUE EXISTIENDO EXACTAMENTE IGUAL PERO OCULTO AL OPERADOR -->
                 <div class="form-group" style="display: none;">
                     <label>Novedad</label>
                     <input type="text" id="novedad" value="Ok">
@@ -101,8 +106,7 @@
     </div>
     
     <script>
-        // REEMPLAZA CON TU URL DE MACRO DE GOOGLE APPS SCRIPT REAL (LA QUE TERMINA EN /exec)
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxwONleXf8MMH1vQOTZIl04egU0QfQfOoQrZ27U7TmOvjCh_jcxRfbM-gr3___Jxdy5/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzl1vNLFAYSijGLKxJCjnXhj5SKUjubtAC66GXidktKDJ2_Zr4irPiJE2jKZpLjb7k/exec';
         
         let contactosData = [], contactosFiltrados = [], contactoActual = null, currentUser = "";
         let horaLlamadaExacta = "";
@@ -141,13 +145,14 @@
             fetch(SCRIPT_URL)
             .then(res => res.json())
             .then(data => {
-                contactosData = data.sort(() => Math.random() - 0.5); // Mezcla aleatoria
+                contactosData = data.sort(() => Math.random() - 0.5); 
                 contactosFiltrados = contactosData;
                 
                 actualizarSelectorCargos();
-                refrescarListaLocal();
+                refrescarListaLocal(contactosFiltrados);
                 
                 document.getElementById('cargoFilter').disabled = false;
+                document.getElementById('searchBar').disabled = false;
                 document.getElementById('contactoSelect').disabled = false;
             }).catch(err => alert("Error cargando la lista de candidatos."));
         }
@@ -160,20 +165,45 @@
         }
 
         function aplicarFiltroCargo() {
+            document.getElementById('searchBar').value = ""; 
             let val = document.getElementById('cargoFilter').value;
             contactosFiltrados = (val === "TODOS") ? contactosData : contactosData.filter(c => (c.cargo ? String(c.cargo).trim() : "Sin cargo") === val);
-            refrescarListaLocal();
+            refrescarListaLocal(contactosFiltrados);
             reiniciarInterfaz(false);
         }
 
-        function refrescarListaLocal() {
-            let sel = document.getElementById('contactoSelect');
-            if(contactosFiltrados.length === 0){
-                sel.innerHTML = '<option value="">Sin pendientes para este cargo</option>';
+        // FUNCIÓN MODIFICADA: Ahora incluye búsqueda por Teléfono Celular
+        function filtrarPorTexto() {
+            let query = document.getElementById('searchBar').value.trim().toLowerCase();
+            if (!query) {
+                refrescarListaLocal(contactosFiltrados);
                 return;
             }
-            let html = '<option value="">-- Selecciona un Candidato --</option>';
-            contactosFiltrados.forEach(c => html += `<option value="${c.fila}">${c.nombre}</option>`);
+
+            let partes = query.split(/\s+/);
+            let regexString = "^" + partes.map(p => p.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join(".*?\\b");
+            let regexNombre = new RegExp(regexString, "i");
+
+            let resultados = contactosFiltrados.filter(c => {
+                let nombre = c.nombre ? String(c.nombre).trim().toLowerCase() : "";
+                let documento = c.documento ? String(c.documento).trim() : "";
+                let telefono = c.telefono ? String(c.telefono).trim() : ""; // Captura el teléfono de la base de datos
+                
+                // Retorna coincidencia si encuentra concordancia en documento, teléfono o iniciales del nombre
+                return documento.includes(query) || telefono.includes(query) || regexNombre.test(nombre);
+            });
+
+            refrescarListaLocal(resultados);
+        }
+
+        function refrescarListaLocal(datosAMostrar) {
+            let sel = document.getElementById('contactoSelect');
+            if(datosAMostrar.length === 0){
+                sel.innerHTML = '<option value="">Sin referencias u coincidencias</option>';
+                return;
+            }
+            let html = `<option value="">-- Selecciona un Candidato (${datosAMostrar.length}) --</option>`;
+            datosAMostrar.forEach(c => html += `<option value="${c.fila}">${c.nombre}</option>`);
             sel.innerHTML = html;
         }
 
@@ -181,7 +211,7 @@
             let val = document.getElementById('contactoSelect').value;
             if(!val) { reiniciarInterfaz(false); return; }
             
-            contactoActual = contactosFiltrados.find(c => c.fila == val);
+            contactoActual = contactosData.find(c => c.fila == val);
             document.getElementById('lblCargo').textContent = contactoActual.cargo || "No especificado";
             document.getElementById('lblDoc').textContent = contactoActual.documento;
             document.getElementById('lblTel').textContent = contactoActual.telefono;
@@ -189,7 +219,7 @@
             
             document.getElementById('infoBox').style.display = 'block';
             document.getElementById('btnCall').style.display = 'block';
-            document.getElementById('btnAbort').style.display = 'block'; // Muestra el botón de cancelar gestión
+            document.getElementById('btnAbort').style.display = 'block'; 
         }
 
         function iniciarLlamada(e) {
@@ -199,15 +229,15 @@
             document.getElementById('horaDisplay').textContent = horaLlamadaExacta;
             
             document.getElementById('btnCall').style.display = 'none';
-            document.getElementById('btnAbort').style.display = 'none'; // Oculta el botón abortar al iniciar
+            document.getElementById('btnAbort').style.display = 'none'; 
             document.getElementById('contactoSelect').disabled = true;
             document.getElementById('cargoFilter').disabled = true;
+            document.getElementById('searchBar').disabled = true; 
             document.getElementById('paso2').style.display = 'block';
             
             fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "bloquear", fila: contactoActual.fila, usuario_call: currentUser }) });
         }
 
-        // NUEVA FUNCIÓN: Cancela la selección actual liberando el contacto en la hoja de cálculo
         function abortarSeleccion() {
             if(!contactoActual) return;
             document.getElementById('loadingText').textContent = "Liberando...";
@@ -215,11 +245,10 @@
             document.getElementById('btnCall').style.display = 'none';
             document.getElementById('btnAbort').style.display = 'none';
 
-            // Ejecuta el desbloqueo directo en Sheets para borrar "En proceso"
             fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ accion: "desbloquear", fila: contactoActual.fila }) })
             .then(() => {
                 document.getElementById('appLoading').style.display = 'none';
-                reiniciarInterfaz(true); // Devuelve la pantalla al estado inicial limpio
+                reiniciarInterfaz(true); 
             });
         }
 
@@ -233,7 +262,7 @@
                 fila: contactoActual.fila,
                 hora: horaLlamadaExacta,
                 observacion: document.getElementById('observacion').value,
-                novedad: document.getElementById('novedad').value, // Lee el "Ok" del input oculto
+                novedad: document.getElementById('novedad').value, 
                 usuario_call: currentUser
             };
 
@@ -242,12 +271,12 @@
             .then(() => {
                 document.getElementById('appLoading').style.display = 'none';
                 
-                // Quitamos el contacto gestionado localmente para que desaparezca
                 contactosData = contactosData.filter(c => c.fila !== contactoActual.fila);
                 let filtroActual = document.getElementById('cargoFilter').value;
                 contactosFiltrados = (filtroActual === "TODOS") ? contactosData : contactosData.filter(c => (c.cargo ? String(c.cargo).trim() : "Sin cargo") === filtroActual);
                 
-                refrescarListaLocal();
+                document.getElementById('searchBar').value = ""; 
+                refrescarListaLocal(contactosFiltrados);
                 reiniciarInterfaz(true);
             });
         }
@@ -267,16 +296,17 @@
         function reiniciarInterfaz(desbloquearFiltros) {
             if(desbloquearFiltros) {
                 document.getElementById('cargoFilter').disabled = false;
+                document.getElementById('searchBar').disabled = false;
                 document.getElementById('contactoSelect').disabled = false;
             }
             document.getElementById('contactoSelect').value = "";
             document.getElementById('infoBox').style.display = 'none';
             document.getElementById('btnCall').style.display = 'none';
-            document.getElementById('btnAbort').style.display = 'none'; // Limpia el botón abortar
+            document.getElementById('btnAbort').style.display = 'none'; 
             document.getElementById('btnCall').href = "#";
             document.getElementById('paso2').style.display = 'none';
             document.getElementById('observacion').value = "";
-            document.getElementById('novedad').value = "Ok"; // Resetea a Ok en background
+            document.getElementById('novedad').value = "Ok"; 
             contactoActual = null;
             horaLlamadaExacta = "";
         }
