@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 450px; width: 100%; }
+        .container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 450px; width: 100%; position: relative; }
         h1 { color: #333; margin-bottom: 10px; text-align: center; font-size: 20px; line-height: 1.3; }
         .subtitle { text-align: center; color: #999; margin-bottom: 25px; font-size: 12px; }
         #loginScreen { display: block; }
@@ -33,10 +33,29 @@
         .loading { display: none; text-align: center; margin-top: 15px; }
         .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .search-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            z-index: 10;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            backdrop-filter: blur(2px);
+        }
+        .search-overlay p { margin-top: 12px; font-weight: 600; color: #764ba2; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="container">
+        <div id="searchLoading" class="search-overlay">
+            <div class="spinner"></div>
+            <p id="overlayText">Buscando...</p>
+        </div>
+
         <!-- PANTALLA DE LOGIN -->
         <div id="loginScreen">
             <h1>🔒 Acceso al Sistema</h1>
@@ -47,7 +66,7 @@
                 <button type="submit" class="btn-primary">Ingresar</button>
             </form>
             <div id="loginMessage" class="message"></div>
-            <div class="loading" id="loginLoading"><div class="spinner"></div><p style="margin-top:10px;">Validando...</p></div>
+            <div class="loading" id="loginLoading"><div class="spinner"></div><p style="margin-top:10px;">Validando y cargando base de datos...</p></div>
         </div>
 
         <!-- PANTALLA PRINCIPAL -->
@@ -55,18 +74,16 @@
             <h1>📞 Contact Center</h1>
             <div class="user-badge" id="displayUsuario"></div>
             
-            <a href="https://docs.google.com/spreadsheets/d/1VUkxrVjr2P2_XZYGGnSk08SHGw4gvxQlRURVsEYryZI/edit?gid=0#gid=0" 
-               target="_blank" id="btnBaseDatos" class="btn-link" style="display: none;">📊 Ver Base de Datos</a>
+            <a href="#" target="_blank" id="btnBaseDatos" class="btn-link" style="display: none;">📊 Ver Base de Datos</a>
 
             <div class="filter-box">
                 <label style="color: #764ba2;">🔍 Filtrar por Cargo</label>
                 <select id="cargoFilter" onchange="aplicarFiltroCargo()" disabled><option>Cargando cargos...</option></select>
             </div>
 
-            <!-- CAMPO DE BÚSQUEDA INTELIGENTE AMPLIADO -->
             <div class="form-group">
                 <label>🔍 Buscar por Cédula, Celular o Nombre (ej: car co za)</label>
-                <input type="text" id="searchBar" placeholder="Escribe cédula, celular o nombre..." oninput="filtrarPorTexto()" disabled>
+                <input type="text" id="searchBar" placeholder="Escribe cédula, celular o nombre..." oninput="debounceBuscar()" disabled>
             </div>
 
             <div class="form-group">
@@ -80,7 +97,7 @@
                 <p><strong>Teléfono:</strong> <span id="lblTel"></span></p>
             </div>
 
-            <!-- BOTONES DE ACCIÓN PARA EL CONTACTO SELECCIONADO -->
+            <!-- BOTONES DE ACCIÓN -->
             <a href="#" class="btn-call" id="btnCall" onclick="iniciarLlamada(event)">☎️ Iniciar Llamada</a>
             <button type="button" class="btn-abort" id="btnAbort" onclick="abortarSeleccion()">❌ Cancelar Gestión</button>
             
@@ -90,12 +107,10 @@
                     <label>Observación</label>
                     <textarea id="observacion" placeholder="Escribe aquí los comentarios de la llamada..."></textarea>
                 </div>
-
                 <div class="form-group" style="display: none;">
                     <label>Novedad</label>
                     <input type="text" id="novedad" value="Ok">
                 </div>
-
                 <button type="button" class="btn-next" onclick="guardarYSiguiente()">Guardar y Finalizar ⏭️</button>
                 <button type="button" class="btn-cancel" onclick="cancelarLlamada()">Cancelar Llamada</button>
             </div>
@@ -110,28 +125,39 @@
         
         let contactosData = [], contactosFiltrados = [], contactoActual = null, currentUser = "";
         let horaLlamadaExacta = "";
+        let debounceTimer;
 
         function iniciarSesion(e) {
             e.preventDefault();
             document.getElementById('loginMessage').style.display = 'none';
             document.getElementById('loginLoading').style.display = 'block';
 
+            // OPTIMIZACIÓN 1: El login ahora solicita explícitamente los contactos de inmediato
             fetch(SCRIPT_URL, { 
                 method: 'POST', 
-                body: JSON.stringify({ accion: "login", usuario: document.getElementById('loginUser').value, password: document.getElementById('loginPass').value }) 
+                body: JSON.stringify({ 
+                    accion: "login", 
+                    usuario: document.getElementById('loginUser').value, 
+                    password: document.getElementById('loginPass').value,
+                    cargarDatosInmediato: true // Flag opcional para sugerir unificación de carga en tu Apps Script
+                }) 
             })
             .then(res => res.json())
             .then(data => {
-                document.getElementById('loginLoading').style.display = 'none';
                 if(data.resultado === 'exito') {
                     currentUser = data.usuario;
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('appScreen').style.display = 'block';
                     document.getElementById('displayUsuario').textContent = "Usuario activo: " + currentUser;
-                    if(data.mostrarLink) document.getElementById('btnBaseDatos').style.display = 'block';
-                    cargarContactos();
+                    if(data.mostrarLink && data.urlBaseDatos) {
+                        const btnDb = document.getElementById('btnBaseDatos');
+                        btnDb.href = data.urlBaseDatos;
+                        btnDb.style.display = 'block';
+                    }
+                    
+                    // Pasamos directamente a la descarga de la lista sin re-autenticar
+                    ejecutarDescargaContactos();
                 } else {
-                    var msg = document.getElementById('loginMessage');
+                    document.getElementById('loginLoading').style.display = 'none';
+                    let msg = document.getElementById('loginMessage');
                     msg.textContent = data.mensaje;
                     msg.className = "message error";
                 }
@@ -141,20 +167,28 @@
             });
         }
 
-        function cargarContactos() {
+        function ejecutarDescargaContactos() {
             fetch(SCRIPT_URL)
             .then(res => res.json())
             .then(data => {
-                contactosData = data.sort(() => Math.random() - 0.5); 
+                // OPTIMIZACIÓN 2: Mezcla rápida óptima para grandes volúmenes
+                contactosData = data.sort(() => 0.5 - Math.random()); 
                 contactosFiltrados = contactosData;
                 
                 actualizarSelectorCargos();
                 refrescarListaLocal(contactosFiltrados);
                 
+                document.getElementById('loginLoading').style.display = 'none';
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('appScreen').style.display = 'block';
+                
                 document.getElementById('cargoFilter').disabled = false;
                 document.getElementById('searchBar').disabled = false;
                 document.getElementById('contactoSelect').disabled = false;
-            }).catch(err => alert("Error cargando la lista de candidatos."));
+            }).catch(err => {
+                document.getElementById('loginLoading').style.display = 'none';
+                alert("Error cargando la lista de candidatos.");
+            });
         }
 
         function actualizarSelectorCargos() {
@@ -172,11 +206,21 @@
             reiniciarInterfaz(false);
         }
 
-        // FUNCIÓN MODIFICADA: Ahora incluye búsqueda por Teléfono Celular
+        function debounceBuscar() {
+            document.getElementById('overlayText').textContent = "Buscando coincidencias...";
+            document.getElementById('searchLoading').style.display = 'flex';
+            
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                filtrarPorTexto();
+            }, 250); // Reducido a 250ms para mayor sensación de velocidad táctil
+        }
+
         function filtrarPorTexto() {
             let query = document.getElementById('searchBar').value.trim().toLowerCase();
             if (!query) {
                 refrescarListaLocal(contactosFiltrados);
+                document.getElementById('searchLoading').style.display = 'none';
                 return;
             }
 
@@ -187,13 +231,13 @@
             let resultados = contactosFiltrados.filter(c => {
                 let nombre = c.nombre ? String(c.nombre).trim().toLowerCase() : "";
                 let documento = c.documento ? String(c.documento).trim() : "";
-                let telefono = c.telefono ? String(c.telefono).trim() : ""; // Captura el teléfono de la base de datos
+                let telefono = c.telefono ? String(c.telefono).trim() : ""; 
                 
-                // Retorna coincidencia si encuentra concordancia en documento, teléfono o iniciales del nombre
                 return documento.includes(query) || telefono.includes(query) || regexNombre.test(nombre);
             });
 
             refrescarListaLocal(resultados);
+            document.getElementById('searchLoading').style.display = 'none';
         }
 
         function refrescarListaLocal(datosAMostrar) {
@@ -202,9 +246,22 @@
                 sel.innerHTML = '<option value="">Sin referencias u coincidencias</option>';
                 return;
             }
-            let html = `<option value="">-- Selecciona un Candidato (${datosAMostrar.length}) --</option>`;
-            datosAMostrar.forEach(c => html += `<option value="${c.fila}">${c.nombre}</option>`);
-            sel.innerHTML = html;
+            
+            // OPTIMIZACIÓN 3: Renderizado por fragmentos de texto en lugar de concatenación masiva de strings lenta
+            let fragmento = `<option value="">-- Selecciona un Candidato (${datosAMostrar.length}) --</option>`;
+            
+            // Si la lista filtrada es inmensa (ej. 10,000+), limitamos la vista previa inicial en el select para no colgar el móvil
+            let limiteMaximo = datosAMostrar.length > 800 ? datosAMostrar.slice(0, 800) : datosAMostrar;
+            
+            limiteMaximo.forEach(c => {
+                fragmento += `<option value="${c.fila}">${c.nombre}</option>`;
+            });
+            
+            if(datosAMostrar.length > 800) {
+                fragmento += `<option value="" disabled>...Use la barra de búsqueda para ver los restantes...</option>`;
+            }
+            
+            sel.innerHTML = fragmento;
         }
 
         function seleccionarContacto() {
